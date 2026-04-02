@@ -1,0 +1,33 @@
+{
+  "name": "@hop-top/xrr",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Multi-channel interaction recorder/replayer",
+  "main": "./src/index.ts",
+  "scripts": {
+    "test": "vitest run",
+    "lint": "eslint src tests"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/js-yaml": "^4.0.9",
+    "@types/node": "^22.0.0",
+    "eslint": "^10.1.0",
+    "typescript": "^5.7.0",
+    "typescript-eslint": "^8.58.0",
+    "vitest": "^3.0.0"
+  },
+  "dependencies": {
+    "js-yaml": "^4.1.0"
+  },
+  "files": [
+    "src/",
+    "dist/",
+    "../LICENSE",
+    "../CODE_OF_CONDUCT.md",
+    "../CONTRIBUTING.md",
+    "../SECURITY.md",
+    "../README.md"
+  ],
+  "license": "MIT"
+}

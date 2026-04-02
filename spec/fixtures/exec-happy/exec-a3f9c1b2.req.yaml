@@ -1,0 +1,12 @@
+xrr: "1"
+adapter: exec
+fingerprint: "a3f9c1b2"
+recorded_at: "2026-04-01T12:00:00Z"
+payload:
+  argv:
+    - gh
+    - pr
+    - view
+    - "123"
+  stdin: ""
+  env: {}

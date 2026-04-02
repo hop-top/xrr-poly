@@ -1,0 +1,35 @@
+[project]
+name = "xrr"
+version = "0.1.0"
+description = "Multi-channel interaction recorder/replayer"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "pyyaml>=6.0.3",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.0.2",
+    "ruff>=0.15.8",
+]
+
+[tool.uv]
+package = true
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/xrr"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "src/",
+    "../LICENSE",
+    "../CODE_OF_CONDUCT.md",
+    "../CONTRIBUTING.md",
+    "../SECURITY.md",
+    "../README.md",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
