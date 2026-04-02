@@ -7,13 +7,17 @@ tasks:
     desc: Run all test suites in parallel
     deps: [test:go, test:py, test:rs, test:ts, test:php]
 
+  e2e:
+    desc: Run all e2e test suites in parallel
+    deps: [e2e:go, e2e:py, e2e:rs, e2e:ts, e2e:php]
+
   lint:
     desc: Run all linters in parallel
     deps: [lint:go, lint:py, lint:rs, lint:ts, lint:php]
 
   check:
-    desc: Full gate — lint + test (all langs, parallel)
-    deps: [lint, test]
+    desc: Full gate — lint + test + e2e (all langs, parallel)
+    deps: [lint, test, e2e]
 
   # ── go ─────────────────────────────────────────────────────────────────────
 
@@ -22,6 +26,12 @@ tasks:
     dir: go
     cmds:
       - go test ./...
+
+  e2e:go:
+    desc: Go e2e tests
+    dir: go
+    cmds:
+      - go test -v -run TestE2E ./...
 
   lint:go:
     desc: Go lint (golangci-lint)
@@ -37,6 +47,12 @@ tasks:
     cmds:
       - uv run pytest
 
+  e2e:py:
+    desc: Python e2e tests
+    dir: py
+    cmds:
+      - uv run pytest tests/test_e2e.py -v
+
   lint:py:
     desc: Python lint (ruff)
     dir: py
@@ -50,6 +66,12 @@ tasks:
     dir: rs
     cmds:
       - cargo test
+
+  e2e:rs:
+    desc: Rust e2e tests
+    dir: rs
+    cmds:
+      - cargo test --test e2e
 
   lint:rs:
     desc: Rust lint (clippy)
@@ -65,6 +87,12 @@ tasks:
     cmds:
       - pnpm test
 
+  e2e:ts:
+    desc: TypeScript e2e tests
+    dir: ts
+    cmds:
+      - pnpm test tests/e2e.test.ts
+
   lint:ts:
     desc: TypeScript lint (eslint + typescript-eslint)
     dir: ts
@@ -78,6 +106,12 @@ tasks:
     dir: php
     cmds:
       - ./vendor/bin/phpunit
+
+  e2e:php:
+    desc: PHP e2e tests
+    dir: php
+    cmds:
+      - ./vendor/bin/phpunit tests/E2eTest.php --testdox
 
   lint:php:
     desc: PHP static analysis (phpstan)
