@@ -31,7 +31,7 @@ tasks:
     desc: Go e2e tests
     dir: go
     cmds:
-      - go test -v -run TestE2E ./...
+      - go test -v -run TestE2E .
 
   lint:go:
     desc: Go lint (golangci-lint)
