@@ -92,6 +92,49 @@ class E2eTest extends TestCase
         $session->record($adapter, $req, fn($r) => null);
     }
 
+    /**
+     * US-0101, US-0102
+     * Real subprocess round-trip: run `echo hello`, record actual stdout,
+     * then replay without executing the process again.
+     */
+    public function testExecRealSubprocess(): void
+    {
+        $adapter = new ExecAdapter();
+        $req     = ['argv' => ['echo', 'hello'], 'stdin' => '', 'env' => []];
+
+        $recordSession = new Session(Mode::Record, new FileCassette($this->tmpDir));
+        $recorded      = $recordSession->record(
+            $adapter,
+            $req,
+            function ($r): array {
+                $result = proc_open(
+                    $r['argv'],
+                    [1 => ['pipe', 'w'], 2 => ['pipe', 'w']],
+                    $pipes
+                );
+                $stdout = stream_get_contents($pipes[1]);
+                $stderr = stream_get_contents($pipes[2]);
+                fclose($pipes[1]);
+                fclose($pipes[2]);
+                $exitCode = proc_close($result);
+                return ['stdout' => $stdout, 'stderr' => $stderr, 'exit_code' => $exitCode, 'duration_ms' => 0];
+            }
+        );
+
+        $this->assertSame("hello\n", $recorded['stdout']);
+        $this->assertSame(0, $recorded['exit_code']);
+
+        $replaySession = new Session(Mode::Replay, new FileCassette($this->tmpDir));
+        $replayed      = $replaySession->record(
+            $adapter,
+            $req,
+            fn($r) => $this->fail('$do must not be called in Replay mode')
+        );
+
+        $this->assertSame("hello\n", $replayed['stdout']);
+        $this->assertSame(0, $replayed['exit_code']);
+    }
+
     // -------------------------------------------------------------------------
     // HTTP adapter
     // -------------------------------------------------------------------------
@@ -144,6 +187,23 @@ class E2eTest extends TestCase
         $session->record($adapter, $req, fn($r) => null);
     }
 
+    /**
+     * US-0104
+     * GET and POST to the same URL must produce different fingerprints
+     * so they never collide in the cassette store.
+     */
+    public function testHttpDifferentMethodsDifferentFingerprints(): void
+    {
+        $adapter  = new HttpAdapter();
+        $getReq   = ['method' => 'GET',  'url' => 'https://api.example.com/users', 'headers' => [], 'body' => ''];
+        $postReq  = ['method' => 'POST', 'url' => 'https://api.example.com/users', 'headers' => [], 'body' => '{"name":"alice"}'];
+
+        $this->assertNotSame(
+            $adapter->fingerprint($getReq),
+            $adapter->fingerprint($postReq)
+        );
+    }
+
     // -------------------------------------------------------------------------
     // Redis adapter
     // -------------------------------------------------------------------------
@@ -187,6 +247,30 @@ class E2eTest extends TestCase
 
         $session = new Session(Mode::Replay, new FileCassette($this->tmpDir));
         $session->record($adapter, $req, fn($r) => null);
+    }
+
+    /**
+     * US-0102
+     * Result can be a list (e.g. LRANGE); list round-trips intact through
+     * record → replay.
+     */
+    public function testRedisReplayListResult(): void
+    {
+        $adapter  = new RedisAdapter();
+        $req      = ['command' => 'LRANGE', 'args' => ['mylist', '0', '-1']];
+        $fakeResp = ['result' => ['a', 'b', 'c']];
+
+        $recordSession = new Session(Mode::Record, new FileCassette($this->tmpDir));
+        $recordSession->record($adapter, $req, fn($r) => $fakeResp);
+
+        $replaySession = new Session(Mode::Replay, new FileCassette($this->tmpDir));
+        $replayed      = $replaySession->record(
+            $adapter,
+            $req,
+            fn($r) => $this->fail('$do must not be called in Replay mode')
+        );
+
+        $this->assertSame(['a', 'b', 'c'], $replayed['result']);
     }
 
     // -------------------------------------------------------------------------
@@ -234,5 +318,44 @@ class E2eTest extends TestCase
 
         $session = new Session(Mode::Replay, new FileCassette($this->tmpDir));
         $session->record($adapter, $req, fn($r) => null);
+    }
+
+    /**
+     * US-0104
+     * Whitespace-equivalent queries (different case / extra spaces) must
+     * produce the same fingerprint and therefore hit the same cassette.
+     */
+    public function testSqlQueryNormalizationSameFingerprint(): void
+    {
+        $adapter = new SqlAdapter();
+        $req1    = ['query' => 'SELECT  *  FROM  t', 'args' => []];
+        $req2    = ['query' => 'select * from t',     'args' => []];
+
+        $this->assertSame($adapter->fingerprint($req1), $adapter->fingerprint($req2));
+    }
+
+    /**
+     * US-0102
+     * Multi-row SQL result round-trips intact through record → replay.
+     */
+    public function testSqlReplayMultipleRows(): void
+    {
+        $adapter  = new SqlAdapter();
+        $req      = ['query' => 'SELECT id, name FROM users', 'args' => []];
+        $rows     = [['id' => 1, 'name' => 'Alice'], ['id' => 2, 'name' => 'Bob']];
+        $fakeResp = ['rows' => $rows, 'affected' => 0];
+
+        $recordSession = new Session(Mode::Record, new FileCassette($this->tmpDir));
+        $recordSession->record($adapter, $req, fn($r) => $fakeResp);
+
+        $replaySession = new Session(Mode::Replay, new FileCassette($this->tmpDir));
+        $replayed      = $replaySession->record(
+            $adapter,
+            $req,
+            fn($r) => $this->fail('$do must not be called in Replay mode')
+        );
+
+        $this->assertSame($rows, $replayed['rows']);
+        $this->assertSame(0, $replayed['affected']);
     }
 }
