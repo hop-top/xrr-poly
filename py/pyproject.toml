@@ -20,6 +20,16 @@ package = true
 [tool.hatch.build.targets.wheel]
 packages = ["src/xrr"]
 
+[tool.hatch.build.targets.sdist]
+include = [
+    "src/",
+    "../LICENSE",
+    "../CODE_OF_CONDUCT.md",
+    "../CONTRIBUTING.md",
+    "../SECURITY.md",
+    "../README.md",
+]
+
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"

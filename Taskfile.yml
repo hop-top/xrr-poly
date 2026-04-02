@@ -19,6 +19,13 @@ tasks:
     desc: Full gate — lint + test + e2e (all langs, parallel)
     deps: [lint, test, e2e]
 
+  dist:
+    desc: Copy root legal/community files into each lang subdir for release packaging
+    cmds:
+      - cp LICENSE CODE_OF_CONDUCT.md CONTRIBUTING.md SECURITY.md README.md go/
+      - cp LICENSE CODE_OF_CONDUCT.md CONTRIBUTING.md SECURITY.md README.md php/
+    # py/ts/rs reference ../ directly in their manifests (pyproject.toml / package.json / Cargo.toml)
+
   # ── go ─────────────────────────────────────────────────────────────────────
 
   test:go:

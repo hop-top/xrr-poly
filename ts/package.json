@@ -19,5 +19,15 @@
   },
   "dependencies": {
     "js-yaml": "^4.1.0"
-  }
+  },
+  "files": [
+    "src/",
+    "dist/",
+    "../LICENSE",
+    "../CODE_OF_CONDUCT.md",
+    "../CONTRIBUTING.md",
+    "../SECURITY.md",
+    "../README.md"
+  ],
+  "license": "MIT"
 }

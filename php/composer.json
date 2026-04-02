@@ -2,6 +2,7 @@
     "name": "hop-top/xrr",
     "description": "Multi-channel interaction recorder/replayer",
     "type": "library",
+    "license": "MIT",
     "require": {
         "php": ">=8.3",
         "symfony/yaml": "^7.0"

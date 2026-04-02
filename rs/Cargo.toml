@@ -2,6 +2,17 @@
 name = "xrr"
 version = "0.1.0"
 edition = "2021"
+license = "MIT"
+readme = "../README.md"
+license-file = "../LICENSE"
+include = [
+    "src/**/*",
+    "../LICENSE",
+    "../CODE_OF_CONDUCT.md",
+    "../CONTRIBUTING.md",
+    "../SECURITY.md",
+    "../README.md",
+]
 
 [dependencies]
 serde = { version = "1", features = ["derive"] }
