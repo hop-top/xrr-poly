@@ -27,12 +27,12 @@ type Adapter interface {
 
 // Request is an opaque adapter-defined value.
 type Request interface {
-	adapterID() string
+	AdapterID() string
 }
 
 // Response is an opaque adapter-defined value.
 type Response interface {
-	adapterID() string
+	AdapterID() string
 }
 
 // Cassette reads/writes interaction files.
