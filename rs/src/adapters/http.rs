@@ -35,8 +35,8 @@ impl Adapter for HttpAdapter {
 
         let canonical = serde_json::to_string(&serde_json::json!({
             "body_hash": body_hash,
-            "method": req.method.to_uppercase(),
-            "path_query": path_query,
+            "method": req.method,
+            "path": path_query,
         }))?;
         let hash = Sha256::digest(canonical.as_bytes());
         Ok(hex::encode(&hash[..4]))

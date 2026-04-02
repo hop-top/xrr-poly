@@ -35,7 +35,7 @@ class HttpAdapter implements AdapterInterface
 
         $fields = [
             'body_hash' => $bodyHash,
-            'method'    => strtoupper($req['method'] ?? 'GET'),
+            'method'    => $req['method'] ?? 'GET',
             'path'      => $pathQuery,
         ];
 

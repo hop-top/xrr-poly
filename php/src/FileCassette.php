@@ -16,7 +16,7 @@ class FileCassette
      */
     public function save(string $adapterID, string $fingerprint, array $req, array $resp): void
     {
-        $now = (new \DateTimeImmutable('now', new \DateTimeZone('UTC')))->format(\DateTimeInterface::RFC3339);
+        $now = (new \DateTimeImmutable('now', new \DateTimeZone('UTC')))->format('Y-m-d\TH:i:s\Z');
 
         $this->write($adapterID, $fingerprint, 'req', $now, $req);
         $this->write($adapterID, $fingerprint, 'resp', $now, $resp);

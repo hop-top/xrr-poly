@@ -31,13 +31,13 @@ resp2, err := s2.Record(ctx, adapter, req, do)
 
 ## Adapters
 
-| ID    | Intercepts      | Fingerprint fields                          |
-|-------|-----------------|---------------------------------------------|
-| exec  | shell commands  | argv + stdin                                |
-| http  | HTTP requests   | method + path+query + sha256(body)[:8]      |
-| grpc  | gRPC calls      | service + method + sha256(proto-bytes)[:8]  |
-| redis | Redis commands  | command + args                              |
-| sql   | SQL queries     | normalized query + args                     |
+| ID    | Intercepts      | Fingerprint fields                         | Ports        |
+|-------|-----------------|--------------------------------------------|--------------|
+| exec  | shell commands  | argv + stdin                               | all          |
+| http  | HTTP requests   | method + path+query + sha256(body)[:8]     | all          |
+| grpc  | gRPC calls      | service + method + sha256(proto-bytes)[:8] | go only      |
+| redis | Redis commands  | command + args                             | all          |
+| sql   | SQL queries     | normalized query + args                    | all          |
 
 ## Cassette Format
 

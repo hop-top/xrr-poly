@@ -25,14 +25,12 @@ impl Adapter for RedisAdapter {
     }
 
     fn fingerprint(&self, req: &Self::Req) -> Result<String, XrrError> {
-        let canonical_str = format!(
-            "{} {}",
-            req.command.to_uppercase(),
-            req.args.join(" ")
-        );
-        let canonical = serde_json::to_string(&serde_json::json!({
-            "canonical": canonical_str,
-        }))?;
+        // Match Go: json.Marshal(strings.Join([COMMAND, args...], " ")) → JSON string
+        let cmd_upper = req.command.to_uppercase();
+        let mut parts = vec![cmd_upper.as_str()];
+        parts.extend(req.args.iter().map(|s| s.as_str()));
+        let joined = parts.join(" ");
+        let canonical = serde_json::to_string(&joined)?;
         let hash = Sha256::digest(canonical.as_bytes());
         Ok(hex::encode(&hash[..4]))
     }
