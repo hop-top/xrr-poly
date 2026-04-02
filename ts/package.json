@@ -23,11 +23,11 @@
   "files": [
     "src/",
     "dist/",
-    "../LICENSE",
-    "../CODE_OF_CONDUCT.md",
-    "../CONTRIBUTING.md",
-    "../SECURITY.md",
-    "../README.md"
+    "LICENSE",
+    "CODE_OF_CONDUCT.md",
+    "CONTRIBUTING.md",
+    "SECURITY.md",
+    "README.md"
   ],
   "license": "MIT"
 }

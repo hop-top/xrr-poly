@@ -23,11 +23,11 @@ packages = ["src/xrr"]
 [tool.hatch.build.targets.sdist]
 include = [
     "src/",
-    "../LICENSE",
-    "../CODE_OF_CONDUCT.md",
-    "../CONTRIBUTING.md",
-    "../SECURITY.md",
-    "../README.md",
+    "LICENSE",
+    "CODE_OF_CONDUCT.md",
+    "CONTRIBUTING.md",
+    "SECURITY.md",
+    "README.md",
 ]
 
 [build-system]
