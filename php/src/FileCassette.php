@@ -13,6 +13,9 @@ class FileCassette
 
     /**
      * Save request and response payloads as two YAML cassette files.
+     *
+     * @param array<string, mixed> $req
+     * @param array<string, mixed> $resp
      */
     public function save(string $adapterID, string $fingerprint, array $req, array $resp): void
     {
@@ -22,6 +25,7 @@ class FileCassette
         $this->write($adapterID, $fingerprint, 'resp', $now, $resp);
     }
 
+    /** @param array<string, mixed> $payload */
     private function write(
         string $adapterID,
         string $fingerprint,
@@ -44,7 +48,7 @@ class FileCassette
     /**
      * Load request and response payloads from cassette files.
      *
-     * @return array{req: array, resp: array}
+     * @return array{req: array<string, mixed>, resp: array<string, mixed>}
      * @throws CassetteMissException
      */
     public function load(string $adapterID, string $fingerprint): array
@@ -55,6 +59,7 @@ class FileCassette
         return ['req' => $req, 'resp' => $resp];
     }
 
+    /** @return array<string, mixed> */
     private function read(string $adapterID, string $fingerprint, string $kind): array
     {
         $path = $this->path($adapterID, $fingerprint, $kind);
@@ -65,13 +70,16 @@ class FileCassette
 
         $envelope = Yaml::parseFile($path);
 
-        if (!isset($envelope['payload']) || !is_array($envelope['payload'])) {
+        if (!is_array($envelope) || !isset($envelope['payload']) || !is_array($envelope['payload'])) {
             throw new \RuntimeException(
                 sprintf('xrr: missing or invalid payload in %s', $path)
             );
         }
 
-        return $envelope['payload'];
+        /** @var array<string, mixed> $payload */
+        $payload = $envelope['payload'];
+
+        return $payload;
     }
 
     private function path(string $adapterID, string $fingerprint, string $kind): string

@@ -9,8 +9,8 @@ use HopTop\Xrr\AdapterInterface;
 /**
  * Adapter for SQL interactions.
  *
- * Request shape:  ['query' => string, 'args' => array]
- * Response shape: ['rows' => array, 'affected' => int]
+ * Request shape:  ['query' => string, 'args' => array<mixed>]
+ * Response shape: ['rows' => array<int, array<string, mixed>>, 'affected' => int]
  *
  * Fingerprint fields: normalized query (strtolower + collapse whitespace) + args
  */
@@ -23,7 +23,9 @@ class SqlAdapter implements AdapterInterface
 
     public function fingerprint(mixed $req): string
     {
-        $query = $this->normalizeQuery($req['query'] ?? '');
+        /** @var array<string, mixed> $req */
+        $rawQuery = $req['query'] ?? '';
+        $query    = $this->normalizeQuery(is_string($rawQuery) ? $rawQuery : '');
         $args  = $req['args'] ?? [];
 
         $fields = [
@@ -39,30 +41,36 @@ class SqlAdapter implements AdapterInterface
 
     private function normalizeQuery(string $query): string
     {
-        return trim(preg_replace('/\s+/', ' ', strtolower($query)));
+        return trim(preg_replace('/\s+/', ' ', strtolower($query)) ?? $query);
     }
 
+    /** @return array<string, mixed> */
     public function serializeReq(mixed $req): array
     {
+        /** @var array<string, mixed> $req */
         return [
             'query' => $req['query'] ?? '',
             'args'  => $req['args']  ?? [],
         ];
     }
 
+    /** @return array<string, mixed> */
     public function serializeResp(mixed $resp): array
     {
+        /** @var array<string, mixed> $resp */
         return [
             'rows'     => $resp['rows']     ?? [],
             'affected' => $resp['affected'] ?? 0,
         ];
     }
 
+    /** @param array<string, mixed> $data */
     public function deserializeReq(array $data): mixed
     {
         return $data;
     }
 
+    /** @param array<string, mixed> $data */
     public function deserializeResp(array $data): mixed
     {
         return $data;

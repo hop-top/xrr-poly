@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from typing import Any, Callable
 
-from .cassette import CassetteMiss, FileCassette
+from .cassette import FileCassette
 
 RECORD = "record"
 REPLAY = "replay"

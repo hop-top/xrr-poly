@@ -1,0 +1,86 @@
+version: "3"
+
+tasks:
+  # ── top-level gates ────────────────────────────────────────────────────────
+
+  test:
+    desc: Run all test suites in parallel
+    deps: [test:go, test:py, test:rs, test:ts, test:php]
+
+  lint:
+    desc: Run all linters in parallel
+    deps: [lint:go, lint:py, lint:rs, lint:ts, lint:php]
+
+  check:
+    desc: Full gate — lint + test (all langs, parallel)
+    deps: [lint, test]
+
+  # ── go ─────────────────────────────────────────────────────────────────────
+
+  test:go:
+    desc: Go tests
+    dir: go
+    cmds:
+      - go test ./...
+
+  lint:go:
+    desc: Go lint (golangci-lint)
+    dir: go
+    cmds:
+      - golangci-lint run
+
+  # ── python ─────────────────────────────────────────────────────────────────
+
+  test:py:
+    desc: Python tests (uv + pytest)
+    dir: py
+    cmds:
+      - uv run pytest
+
+  lint:py:
+    desc: Python lint (ruff)
+    dir: py
+    cmds:
+      - uv run ruff check .
+
+  # ── rust ───────────────────────────────────────────────────────────────────
+
+  test:rs:
+    desc: Rust tests
+    dir: rs
+    cmds:
+      - cargo test
+
+  lint:rs:
+    desc: Rust lint (clippy)
+    dir: rs
+    cmds:
+      - cargo clippy -- -D warnings
+
+  # ── typescript ─────────────────────────────────────────────────────────────
+
+  test:ts:
+    desc: TypeScript tests (vitest)
+    dir: ts
+    cmds:
+      - pnpm test
+
+  lint:ts:
+    desc: TypeScript lint (eslint + typescript-eslint)
+    dir: ts
+    cmds:
+      - pnpm lint
+
+  # ── php ────────────────────────────────────────────────────────────────────
+
+  test:php:
+    desc: PHP tests (phpunit)
+    dir: php
+    cmds:
+      - ./vendor/bin/phpunit
+
+  lint:php:
+    desc: PHP static analysis (phpstan)
+    dir: php
+    cmds:
+      - ./vendor/bin/phpstan analyse src --level 9
