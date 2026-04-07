@@ -42,11 +42,11 @@ xrr: "1"                      # format version — required; always string "1"
 adapter: exec                 # adapter id — required
 fingerprint: "a3f9c1b2"       # 8-char hex — required
 recorded_at: "2026-04-01T12:00:00Z"  # RFC3339 UTC — required
-payload:                      # adapter-specific — required
+payload:                      # adapter-specific — required, MUST be an object
   <adapter fields>
 ```
 
-### Required Fields
+### Required Fields (both req and resp)
 
 | Field        | Type   | Description                        |
 |--------------|--------|------------------------------------|
@@ -54,11 +54,15 @@ payload:                      # adapter-specific — required
 | adapter      | string | Adapter ID matching `[a-z][a-z0-9-]*` |
 | fingerprint  | string | 8 hex chars                        |
 | recorded_at  | string | RFC3339 UTC timestamp              |
-| payload      | object | Adapter-specific request/response  |
+| payload      | object | Adapter-specific request/response. MUST be a non-null object (writers MUST normalize an absent or null payload to `{}`). |
 
-### Optional Fields
+### Optional Fields (`.resp.yaml` only)
 
-Any additional top-level fields are ignored by loaders (forward compat).
+| Field | Type   | Description                                                                                                                                                                                                                                                                                       |
+|-------|--------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| error | string | Recorded error message from the original interaction. If present and non-empty, replay MUST re-emit a non-nil error alongside the response payload. Empty or absent ⇒ success. Recordings written before this field existed replay as success. **`.req.yaml` MUST NOT carry this field.** |
+
+Any other additional top-level fields are ignored by loaders (forward compat).
 
 ## Request Envelope Example (exec)
 
@@ -73,7 +77,7 @@ payload:
   env: {}
 ```
 
-## Response Envelope Example (exec)
+## Response Envelope Example (exec, success)
 
 ```yaml
 xrr: "1"
@@ -86,6 +90,24 @@ payload:
   exit_code: 0
   duration_ms: 142
 ```
+
+## Response Envelope Example (exec, failure)
+
+```yaml
+xrr: "1"
+adapter: exec
+fingerprint: "deadbeef"
+recorded_at: "2026-04-01T12:00:00Z"
+error: "exit status 1"
+payload:
+  stdout: ""
+  stderr: "boom\n"
+  exit_code: 1
+  duration_ms: 8
+```
+
+On replay, the session re-emits a non-nil error whose `Error()` string equals
+the recorded `error` field, alongside the deserialized response payload.
 
 ## Cross-Language Conformance
 
