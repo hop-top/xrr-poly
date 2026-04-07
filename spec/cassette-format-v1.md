@@ -74,8 +74,44 @@ recorded_at: "2026-04-01T12:00:00Z"
 payload:
   argv: ["gh", "pr", "view", "123"]
   stdin: ""
+  cwd: "/workspace/repo"   # optional — see Exec Fingerprint Inputs below
   env: {}
 ```
+
+### Exec Fingerprint Inputs (v1)
+
+The v1 canonical exec fingerprint is the sha256 of canonical JSON over
+`{argv, stdin}`, truncated to 8 hex chars. **All ports MUST hash these
+two fields and only these two fields** to preserve the cross-runtime
+replay guarantee: a cassette recorded in any language port MUST replay
+in any other port.
+
+`cwd` and `env` MAY appear in the serialized request payload for
+debugging, auditing, or adopter-side use, but they do not participate
+in the v1 fingerprint. Relying on per-cwd or per-env discrimination at
+the v1 fingerprint level is not guaranteed.
+
+#### Go-only extension: `cwd` in fingerprint (non-canonical)
+
+The Go port (`hop.top/xrr` as of v0.1.0-alpha.3) additionally hashes
+`cwd` into the exec fingerprint **only when non-empty**, so the same
+command run in different working directories produces distinct
+cassette keys. This is a deliberate extension to unblock cross-process
+e2e adopters (e.g. one parent `XRR_CASSETTE_DIR` capturing many
+subprocess invocations from different temp dirs).
+
+The extension is backward compatible in one direction only:
+
+- Go-recorded cassettes **with empty `cwd`** still hash as v1 canonical
+  and replay cleanly in ts / py / rs / php ports.
+- Go-recorded cassettes **with non-empty `cwd`** will produce a
+  fingerprint that no other port currently computes, so they will
+  **NOT replay in non-Go ports** until those ports adopt the same
+  rule. Until then, using non-empty `cwd` is a Go-only contract.
+
+Other ports are expected to adopt the same rule (tracked as follow-up
+tasks in the xrr project). Once adoption is complete, this extension
+becomes a v1 clarification rather than a Go-specific behavior.
 
 ## Response Envelope Example (exec, success)
 
