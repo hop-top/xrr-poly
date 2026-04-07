@@ -74,8 +74,28 @@ recorded_at: "2026-04-01T12:00:00Z"
 payload:
   argv: ["gh", "pr", "view", "123"]
   stdin: ""
+  cwd: "/workspace/repo"   # optional — see Exec Fingerprint Inputs below
   env: {}
 ```
+
+### Exec Fingerprint Inputs
+
+The exec adapter hashes the canonical JSON of `{argv, stdin, cwd?}` to
+produce its 8-char fingerprint. `cwd` participates in the hash **only
+when non-empty**, so:
+
+- Adopters that don't populate `cwd` get the legacy `argv+stdin`-only
+  fingerprint. Cassettes recorded before the `cwd` field existed still
+  match and replay successfully.
+- Adopters that DO populate `cwd` (e.g. cross-process e2e harnesses
+  using `XRR_CASSETTE_DIR` where one parent cassette dir captures many
+  subprocess invocations from different working directories) get
+  per-directory cassette isolation automatically. Same command in two
+  different cwds → two distinct cassette keys, no collision.
+
+`env` is serialized for debugging/auditing but is NOT part of the
+fingerprint today — relying on env-based discrimination requires a
+different adapter or extending this spec in a future version.
 
 ## Response Envelope Example (exec, success)
 

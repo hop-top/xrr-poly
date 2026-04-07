@@ -33,11 +33,21 @@ resp2, err := s2.Record(ctx, adapter, req, do)
 
 | ID    | Intercepts      | Fingerprint fields                         | Ports        |
 |-------|-----------------|--------------------------------------------|--------------|
-| exec  | shell commands  | argv + stdin                               | all          |
+| exec  | shell commands  | argv + stdin + cwd (if non-empty)          | all          |
 | http  | HTTP requests   | method + path+query + sha256(body)[:8]     | all          |
 | grpc  | gRPC calls      | service + method + sha256(proto-bytes)[:8] | go only      |
 | redis | Redis commands  | command + args                             | all          |
 | sql   | SQL queries     | normalized query + args                    | all          |
+
+### Exec adapter: per-directory isolation
+
+If the same command runs in multiple working directories within one
+cassette dir (common for cross-process e2e tests using `XRR_CASSETTE_DIR`),
+populate `exec.Request.Cwd` so the fingerprint hashes the working
+directory too. Backward compatible: leaving `Cwd` empty preserves the
+legacy `argv+stdin`-only fingerprint, so existing cassettes keep
+replaying. See `go/examples/wrap_command_runner/main.go` for the
+canonical adoption pattern.
 
 ## Cassette Format
 
