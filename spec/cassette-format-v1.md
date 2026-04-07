@@ -42,6 +42,7 @@ xrr: "1"                      # format version — required; always string "1"
 adapter: exec                 # adapter id — required
 fingerprint: "a3f9c1b2"       # 8-char hex — required
 recorded_at: "2026-04-01T12:00:00Z"  # RFC3339 UTC — required
+error: "exit status 1"        # optional — see Error Field below
 payload:                      # adapter-specific — required
   <adapter fields>
 ```
@@ -58,7 +59,11 @@ payload:                      # adapter-specific — required
 
 ### Optional Fields
 
-Any additional top-level fields are ignored by loaders (forward compat).
+| Field | Type   | Description                                                                                                                                                                                                                                            |
+|-------|--------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| error | string | Recorded error message from the original interaction. If present and non-empty on a `.resp.yaml`, replay MUST re-emit a non-nil error alongside the response payload. Empty or absent ⇒ success. Recordings written before this field existed replay as success. Backward compatible with v1 readers that ignore unknown fields. |
+
+Any other additional top-level fields are ignored by loaders (forward compat).
 
 ## Request Envelope Example (exec)
 
@@ -73,7 +78,7 @@ payload:
   env: {}
 ```
 
-## Response Envelope Example (exec)
+## Response Envelope Example (exec, success)
 
 ```yaml
 xrr: "1"
@@ -86,6 +91,24 @@ payload:
   exit_code: 0
   duration_ms: 142
 ```
+
+## Response Envelope Example (exec, failure)
+
+```yaml
+xrr: "1"
+adapter: exec
+fingerprint: "deadbeef"
+recorded_at: "2026-04-01T12:00:00Z"
+error: "exit status 1"
+payload:
+  stdout: ""
+  stderr: "boom\n"
+  exit_code: 1
+  duration_ms: 8
+```
+
+On replay, the session re-emits a non-nil error whose `Error()` string equals
+the recorded `error` field, alongside the deserialized response payload.
 
 ## Cross-Language Conformance
 
