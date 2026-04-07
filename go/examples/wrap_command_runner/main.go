@@ -66,36 +66,51 @@ func NewWrapper(inner Real, sess *xrr.FileSession) *Wrapper {
 }
 
 // Run records or replays a `name args...` invocation.
+//
+// Process exit failures (`*os/exec.ExitError`) are absorbed into the
+// Response (via ExitCodeFromError) and returned as a nil error from the
+// inner do(). This is necessary because FileSession.record currently
+// short-circuits on do() error and would otherwise skip writing the
+// cassette — leaving non-zero exits un-replayable. Real I/O failures
+// (start failure, ctx cancel, etc.) still bubble up as -1 + non-nil err.
 func (w *Wrapper) Run(ctx context.Context, name string, args ...string) (string, error) {
 	req := &xexec.Request{Argv: append([]string{name}, args...)}
 	resp, err := w.sess.Record(ctx, w.adapter, req, func() (xrr.Response, error) {
 		out, runErr := w.inner.Run(ctx, name, args...)
-		return &xexec.Response{
-			Stdout:   out,
-			ExitCode: xexec.ExitCodeFromError(runErr),
-		}, runErr
+		return wrapExecResult(out, runErr)
 	})
 	return stdoutOf(resp), err
 }
 
 // RunInDir records or replays a `name args...` invocation in a working dir.
 //
-// Note dir is folded into the fingerprint via an env-style entry so two
-// runs of the same command in different dirs don't collide. Adapt this to
-// your own determinism rules.
+// Caveat: the current exec adapter fingerprint hashes only argv+stdin,
+// so identical commands run in different dirs WILL collide on the same
+// cassette. If your tests need per-directory isolation, either extend
+// the adapter's fingerprinting inputs or namespace the cassette dir
+// per test case. The dir is still honoured by inner.RunInDir during
+// record mode — only the replay key is dir-agnostic.
 func (w *Wrapper) RunInDir(ctx context.Context, dir, name string, args ...string) (string, error) {
-	req := &xexec.Request{
-		Argv: append([]string{name}, args...),
-		Env:  map[string]string{"PWD": dir},
-	}
+	req := &xexec.Request{Argv: append([]string{name}, args...)}
 	resp, err := w.sess.Record(ctx, w.adapter, req, func() (xrr.Response, error) {
 		out, runErr := w.inner.RunInDir(ctx, dir, name, args...)
-		return &xexec.Response{
-			Stdout:   out,
-			ExitCode: xexec.ExitCodeFromError(runErr),
-		}, runErr
+		return wrapExecResult(out, runErr)
 	})
 	return stdoutOf(resp), err
+}
+
+// wrapExecResult absorbs `*os/exec.ExitError` into the Response so the
+// session records a cassette for non-zero exits. Non-exit errors (start
+// failure, context cancel, etc.) propagate as -1 + non-nil error.
+func wrapExecResult(out string, runErr error) (xrr.Response, error) {
+	code := xexec.ExitCodeFromError(runErr)
+	resp := &xexec.Response{Stdout: out, ExitCode: code}
+	if code >= 0 {
+		// Either success or a clean process exit — recordable, no error.
+		return resp, nil
+	}
+	// -1: not a process exit (e.g. binary missing). Surface to caller.
+	return resp, runErr
 }
 
 // stdoutOf normalises the response: in record mode it's *xexec.Response;
@@ -200,8 +215,13 @@ func main() {
 		fmt.Printf("record git branch: %s\n", branch)
 	}
 
-	// Docker domain wrapper. Output may be empty if dockerd is not running;
-	// we still record whatever the daemon says (or the error).
+	// Docker domain wrapper. If `docker` is not on PATH the call returns
+	// a non-nil error (start failure → ExitCodeFromError = -1) and
+	// wrapExecResult propagates the error WITHOUT recording a cassette.
+	// If dockerd is unreachable but the binary exists, docker exits
+	// non-zero — wrapExecResult absorbs that into the Response and a
+	// cassette IS written. The asymmetry is intentional and reflects the
+	// current FileSession.record contract.
 	docker := NewDockerRunner(w)
 	ver, err := docker.Version(ctx)
 	if err != nil {

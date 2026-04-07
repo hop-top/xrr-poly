@@ -41,9 +41,11 @@ func TestExitCodeFromError_StartFailure(t *testing.T) {
 }
 
 func TestExitCodeFromError_ContextCancel(t *testing.T) {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Millisecond)
+	// Generous timeout (200ms) to avoid flake on slow/loaded CI; the
+	// command sleeps 30s so the timeout always wins regardless of jitter.
+	ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
 	defer cancel()
-	err := osexec.CommandContext(ctx, "sleep", "1").Run()
+	err := osexec.CommandContext(ctx, "sleep", "30").Run()
 	// killed by context → still surfaces as ExitError on most platforms;
 	// either a real exit code or -1 is acceptable, but never 0.
 	assert.NotEqual(t, 0, exec.ExitCodeFromError(err))
