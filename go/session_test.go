@@ -157,6 +157,43 @@ func TestSessionReplay_ReEmitsRecordedError(t *testing.T) {
 	assert.Equal(t, "hello\n", raw.Payload["stdout"])
 }
 
+// TestSessionRecord_NilRespWithError — when do() returns (nil, err) the
+// session must still persist a valid v1 cassette (payload: {} on disk,
+// not payload: null) and replay must surface RawResponse{Payload: empty}
+// + the recorded error string.
+func TestSessionRecord_NilRespWithError(t *testing.T) {
+	dir := t.TempDir()
+	rec := xrr.NewSession(xrr.ModeRecord, xrr.NewFileCassette(dir))
+	adapter := &fakeAdapter{id: "exec", fp: "nilres01"}
+	req := &fakeReq{}
+
+	resp, err := rec.Record(context.Background(), adapter, req, func() (xrr.Response, error) {
+		return nil, errors.New("dial tcp: connection refused")
+	})
+	require.Error(t, err)
+	assert.Equal(t, "dial tcp: connection refused", err.Error())
+	assert.Nil(t, resp, "session passes through nil resp from do()")
+
+	// On-disk resp envelope must have payload: {} (object), never payload: null.
+	data, readErr := os.ReadFile(dir + "/exec-nilres01.resp.yaml")
+	require.NoError(t, readErr)
+	assert.NotContains(t, string(data), "payload: null", "v1 spec requires payload to be a non-null object")
+	assert.Contains(t, string(data), "payload: {}", "nil resp must serialize as empty map")
+
+	rep := xrr.NewSession(xrr.ModeReplay, xrr.NewFileCassette(dir))
+	replayResp, replayErr := rep.Record(context.Background(), adapter, req, func() (xrr.Response, error) {
+		t.Fatal("do() must not run in replay mode")
+		return nil, nil
+	})
+	require.Error(t, replayErr)
+	assert.Equal(t, "dial tcp: connection refused", replayErr.Error())
+	require.NotNil(t, replayResp, "replay must always return RawResponse, even for nil-resp recordings")
+	raw, ok := replayResp.(*xrr.RawResponse)
+	require.True(t, ok)
+	assert.NotNil(t, raw.Payload, "replayed payload must be a non-nil empty map, not nil")
+	assert.Empty(t, raw.Payload)
+}
+
 // TestSessionReplay_BackwardCompat_NoErrorField — cassettes written by older
 // xrr versions (no envelope error field) still replay as success.
 func TestSessionReplay_BackwardCompat_NoErrorField(t *testing.T) {

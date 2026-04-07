@@ -39,16 +39,32 @@ func NewFileCassette(dir string) *FileCassette {
 // success). When non-nil, recordedErr.Error() is persisted as the
 // envelope-level "error" field on the resp file. The req file never
 // carries an error.
+//
+// A nil resp (common when do() returns (nil, err)) is normalized to an
+// empty map so the on-disk envelope still satisfies the v1 spec, which
+// requires payload to be a non-null object. Replay will surface it as
+// RawResponse{Payload: empty map} alongside the recorded error.
 func (c *FileCassette) Save(adapterID, fingerprint string, req, resp any, recordedErr error) error {
 	now := time.Now().UTC().Format(time.RFC3339)
-	if err := c.write(adapterID, fingerprint, "req", now, "", req); err != nil {
+	if err := c.write(adapterID, fingerprint, "req", now, "", normalizePayload(req)); err != nil {
 		return err
 	}
 	respErr := ""
 	if recordedErr != nil {
 		respErr = recordedErr.Error()
 	}
-	return c.write(adapterID, fingerprint, "resp", now, respErr, resp)
+	return c.write(adapterID, fingerprint, "resp", now, respErr, normalizePayload(resp))
+}
+
+// normalizePayload returns an empty map when v is nil so the encoded
+// envelope never contains payload: null (which violates the v1 spec
+// "payload required object" rule and breaks downstream decoders that
+// expect an object). Non-nil values pass through untouched.
+func normalizePayload(v any) any {
+	if v == nil {
+		return map[string]any{}
+	}
+	return v
 }
 
 func (c *FileCassette) write(adapterID, fingerprint, kind, recordedAt, recordedErr string, payload any) error {
