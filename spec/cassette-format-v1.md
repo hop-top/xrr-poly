@@ -78,24 +78,40 @@ payload:
   env: {}
 ```
 
-### Exec Fingerprint Inputs
+### Exec Fingerprint Inputs (v1)
 
-The exec adapter hashes the canonical JSON of `{argv, stdin, cwd?}` to
-produce its 8-char fingerprint. `cwd` participates in the hash **only
-when non-empty**, so:
+The v1 canonical exec fingerprint is the sha256 of canonical JSON over
+`{argv, stdin}`, truncated to 8 hex chars. **All ports MUST hash these
+two fields and only these two fields** to preserve the cross-runtime
+replay guarantee: a cassette recorded in any language port MUST replay
+in any other port.
 
-- Adopters that don't populate `cwd` get the legacy `argv+stdin`-only
-  fingerprint. Cassettes recorded before the `cwd` field existed still
-  match and replay successfully.
-- Adopters that DO populate `cwd` (e.g. cross-process e2e harnesses
-  using `XRR_CASSETTE_DIR` where one parent cassette dir captures many
-  subprocess invocations from different working directories) get
-  per-directory cassette isolation automatically. Same command in two
-  different cwds → two distinct cassette keys, no collision.
+`cwd` and `env` MAY appear in the serialized request payload for
+debugging, auditing, or adopter-side use, but they do not participate
+in the v1 fingerprint. Relying on per-cwd or per-env discrimination at
+the v1 fingerprint level is not guaranteed.
 
-`env` is serialized for debugging/auditing but is NOT part of the
-fingerprint today — relying on env-based discrimination requires a
-different adapter or extending this spec in a future version.
+#### Go-only extension: `cwd` in fingerprint (non-canonical)
+
+The Go port (`hop.top/xrr` as of v0.1.0-alpha.3) additionally hashes
+`cwd` into the exec fingerprint **only when non-empty**, so the same
+command run in different working directories produces distinct
+cassette keys. This is a deliberate extension to unblock cross-process
+e2e adopters (e.g. one parent `XRR_CASSETTE_DIR` capturing many
+subprocess invocations from different temp dirs).
+
+The extension is backward compatible in one direction only:
+
+- Go-recorded cassettes **with empty `cwd`** still hash as v1 canonical
+  and replay cleanly in ts / py / rs / php ports.
+- Go-recorded cassettes **with non-empty `cwd`** will produce a
+  fingerprint that no other port currently computes, so they will
+  **NOT replay in non-Go ports** until those ports adopt the same
+  rule. Until then, using non-empty `cwd` is a Go-only contract.
+
+Other ports are expected to adopt the same rule (tracked as follow-up
+tasks in the xrr project). Once adoption is complete, this extension
+becomes a v1 clarification rather than a Go-specific behavior.
 
 ## Response Envelope Example (exec, success)
 

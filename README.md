@@ -31,23 +31,37 @@ resp2, err := s2.Record(ctx, adapter, req, do)
 
 ## Adapters
 
-| ID    | Intercepts      | Fingerprint fields                         | Ports        |
-|-------|-----------------|--------------------------------------------|--------------|
-| exec  | shell commands  | argv + stdin + cwd (if non-empty)          | all          |
-| http  | HTTP requests   | method + path+query + sha256(body)[:8]     | all          |
-| grpc  | gRPC calls      | service + method + sha256(proto-bytes)[:8] | go only      |
-| redis | Redis commands  | command + args                             | all          |
-| sql   | SQL queries     | normalized query + args                    | all          |
+| ID    | Intercepts      | Fingerprint fields                         | Ports         |
+|-------|-----------------|--------------------------------------------|---------------|
+| exec  | shell commands  | argv + stdin                               | all¹          |
+| http  | HTTP requests   | method + path+query + sha256(body)[:8]     | all           |
+| grpc  | gRPC calls      | service + method + sha256(proto-bytes)[:8] | go only       |
+| redis | Redis commands  | command + args                             | all           |
+| sql   | SQL queries     | normalized query + args                    | all           |
 
-### Exec adapter: per-directory isolation
+¹ The Go port additionally hashes `cwd` into the exec fingerprint when
+non-empty — a backward-compatible extension for per-directory isolation
+(see below). Other ports are expected to adopt the same rule.
+
+### Exec adapter: per-directory isolation (Go-only extension)
 
 If the same command runs in multiple working directories within one
 cassette dir (common for cross-process e2e tests using `XRR_CASSETTE_DIR`),
 populate `exec.Request.Cwd` so the fingerprint hashes the working
-directory too. Backward compatible: leaving `Cwd` empty preserves the
-legacy `argv+stdin`-only fingerprint, so existing cassettes keep
-replaying. See `go/examples/wrap_command_runner/main.go` for the
-canonical adoption pattern.
+directory too. Within the Go port this is backward compatible: leaving
+`Cwd` empty preserves the legacy `argv+stdin`-only fingerprint, so
+existing cassettes keep replaying.
+
+**Cross-runtime limitation:** until the ts / py / rs / php exec
+adapters implement the same "include `cwd` when non-empty" rule,
+cassettes recorded in Go with non-empty `Cwd` will **NOT** replay in
+those ports — their fingerprint calculation will differ and the load
+will miss. Use non-empty `Cwd` only when record and replay both happen
+in runtimes that agree on the rule, or leave `Cwd` empty to preserve
+the cross-runtime replay guarantee. See
+`go/examples/wrap_command_runner/main.go` for the canonical Go
+adoption pattern, and `spec/cassette-format-v1.md` for the formal
+spec status of this extension.
 
 ## Cassette Format
 

@@ -51,7 +51,8 @@ func TestExecAdapterFingerprint_CwdDiscriminates(t *testing.T) {
 		"same command in different cwds must NOT collide on the same cassette key")
 
 	// deterministic within a cwd
-	fpA2, _ := a.Fingerprint(reqA)
+	fpA2, err := a.Fingerprint(reqA)
+	require.NoError(t, err)
 	assert.Equal(t, fpA, fpA2)
 }
 

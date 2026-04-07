@@ -16,9 +16,18 @@ import (
 // in different directories produces distinct cassette keys — essential
 // for cross-process e2e adopters (see XRR_CASSETTE_DIR pattern) whose
 // tests invoke the same binary many times under different cwds within a
-// single parent cassette dir. Leave Cwd empty to preserve the legacy
-// argv+stdin-only fingerprint shape (backwards compatible with cassettes
-// recorded before this field existed).
+// single parent cassette dir.
+//
+// This is a Go-only extension to the v1 cassette spec. Within the Go
+// port it is backward compatible: leaving Cwd empty preserves the
+// canonical argv+stdin fingerprint and cassettes recorded before this
+// field existed still match. But cassettes recorded with NON-EMPTY Cwd
+// will NOT replay in ts / py / rs / php ports until those ports adopt
+// the same rule — their fingerprint calculation will miss. Use
+// non-empty Cwd only when record and replay happen in runtimes that
+// agree on the extension, or leave Cwd empty to preserve cross-runtime
+// replay. See spec/cassette-format-v1.md "Exec Fingerprint Inputs" for
+// the formal status of this extension.
 type Request struct {
 	Argv  []string          `yaml:"argv"  json:"argv"`
 	Stdin string            `yaml:"stdin,omitempty" json:"stdin,omitempty"`
