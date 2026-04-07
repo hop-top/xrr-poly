@@ -16,9 +16,11 @@ func TestFileCassetteSaveLoad(t *testing.T) {
 	req := map[string]any{"argv": []any{"gh", "pr", "view", "1"}}
 	resp := map[string]any{"stdout": "title: foo", "exit_code": 0}
 	fp := "a3f9c1b2"
-	require.NoError(t, c.Save("exec", fp, req, resp))
+	require.NoError(t, c.Save("exec", fp, req, resp, nil))
 	var gotReq, gotResp map[string]any
-	require.NoError(t, c.Load("exec", fp, &gotReq, &gotResp))
+	recordedErr, err := c.Load("exec", fp, &gotReq, &gotResp)
+	require.NoError(t, err)
+	assert.Empty(t, recordedErr)
 	assert.Equal(t, req, gotReq)
 	assert.Equal(t, resp, gotResp)
 }

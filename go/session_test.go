@@ -69,7 +69,7 @@ func TestSessionReplay(t *testing.T) {
 	dir := t.TempDir()
 	// seed cassette
 	c := xrr.NewFileCassette(dir)
-	require.NoError(t, c.Save("exec", "a3f9c1b2", fakeReqPayload, fakeRespPayload))
+	require.NoError(t, c.Save("exec", "a3f9c1b2", fakeReqPayload, fakeRespPayload, nil))
 
 	s := xrr.NewSession(xrr.ModeReplay, c)
 	adapter := &fakeAdapter{id: "exec", fp: "a3f9c1b2"}
